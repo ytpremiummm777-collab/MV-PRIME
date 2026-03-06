@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>FOCUS PRIME - VIGIA PRO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --blue: #00d1ff; --xp: #00ff88; --red: #ff453a; --bg: #050507; }
+        body { background: var(--bg); color: white; font-family: -apple-system, sans-serif; overflow: hidden; margin: 0; }
+        .glass { background: rgba(255, 255, 255, 0.04); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.08); }
+        .page { display: none; height: 100vh; overflow-y: auto; padding-bottom: 180px; }
+        .active-page { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .xp-fill { height: 100%; background: var(--xp); width: 0%; transition: width 0.5s ease; }
+        .shake { animation: shake 0.4s; border: 2px solid var(--red) !important; }
+        .success-glow { animation: glow 0.5s; border: 2px solid var(--xp) !important; box-shadow: 0 0 15px var(--xp); }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        @keyframes glow { 50% { transform: scale(1.01); } }
+        input, textarea { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px; border-radius: 15px; width: 100%; outline: none; }
+        #debrief-screen { animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    </style>
+</head>
+<body class="p-6 pt-12">
+
+    <header class="mb-4 px-2 flex justify-between items-center">
+        <div>
+            <h1 class="text-xl font-black italic text-[#00d1ff] tracking-tighter uppercase">Focus<span class="text-white">Prime</span></h1>
+            <p id="hud-cargo" class="text-[8px] text-gray-500 font-bold uppercase tracking-widest italic">Cargo: Vigilância Escolar</p>
+        </div>
+        <div class="text-right">
+            <span class="text-[10px] font-black italic">XP <span id="xp-total-display">0</span></span>
+            <div class="w-16 h-1 bg-white/10 rounded-full mt-1"><div id="xp-fill" class="xp-fill"></div></div>
+        </div>
+    </header>
+
+    <section id="page-home" class="page active-page px-2">
+        <div class="glass p-6 rounded-[35px] text-center mb-4 border-b-2 border-blue-500/20">
+            <div class="flex justify-between gap-1 mb-2">
+                <div class="flex-1"><b id="d-days" class="text-2xl block font-black tabular-nums">00</b><span class="text-[7px] text-gray-500 uppercase">Dias</span></div>
+                <div class="flex-1"><b id="d-hours" class="text-2xl block font-black tabular-nums">00</b><span class="text-[7px] text-gray-500 uppercase">Horas</span></div>
+                <div class="flex-1"><b id="d-min" class="text-2xl block font-black tabular-nums">00</b><span class="text-[7px] text-gray-500 uppercase">Min</span></div>
+                <div class="flex-1 text-blue-400"><b id="d-sec" class="text-2xl block font-black tabular-nums">00</b><span class="text-[7px] text-gray-500 uppercase">Seg</span></div>
+            </div>
+            <p id="reminder-msg" class="text-[8px] text-orange-400 font-bold italic uppercase">● Prepare-se para a ronda diária</p>
+        </div>
+
+        <button onclick="startSession()" class="w-full glass p-5 rounded-[25px] border-l-4 border-blue-500 mb-6 flex justify-between items-center active:scale-95 transition-all">
+            <div class="text-left"><p class="text-[9px] font-black text-blue-400 uppercase italic">Simulado Vigia Escolar</p><p class="text-xs font-bold italic">Questões de Concursos Reais</p></div>
+            <span class="text-xl">🛡️</span>
+        </button>
+
+        <div class="glass p-5 rounded-[30px] mb-6">
+            <p class="text-[9px] font-black text-gray-500 uppercase mb-3 italic">Bloco de Notas do Vigia</p>
+            <textarea id="main-notes" rows="3" oninput="saveData()" placeholder="Anotar códigos de rádio ou leis..."></textarea>
+        </div>
+    </section>
+
+    <section id="page-careers" class="page px-2">
+        <h2 class="text-[10px] font-black text-gray-500 uppercase mb-4 tracking-widest text-center italic">Categorias Sincronizadas</h2>
+        <div id="cat-grid" class="space-y-4"></div>
+    </section>
+
+    <section id="page-settings" class="page px-4">
+        <div class="glass p-6 rounded-[35px] space-y-6">
+            <h3 class="text-sm font-black text-blue-400 uppercase italic">Dados do Concurso</h3>
+            <input type="datetime-local" id="cfg-date" onchange="saveData()">
+            <input type="number" id="cfg-goal" placeholder="Meta de Questões/Dia" onchange="saveData()">
+        </div>
+    </section>
+
+    <div id="quiz-screen" class="fixed inset-0 bg-[#050507] z-[100] p-6 pt-12 hidden overflow-y-auto">
+        <div class="flex justify-between items-center mb-6">
+            <span id="q-banca" class="bg-blue-500 text-black text-[9px] font-black px-2 py-1 rounded italic uppercase">VUNESP</span>
+            <span id="session-timer" class="text-[10px] font-mono text-blue-400">00:00</span>
+        </div>
+        <p id="q-text" class="text-lg font-bold mb-8 italic leading-tight text-gray-100"></p>
+        <div id="options-grid" class="space-y-3 mb-8"></div>
+        <div id="feedback-area" class="hidden space-y-4 pb-20">
+            <div class="p-5 rounded-3xl bg-blue-500/10 border border-blue-500/20"><p id="q-explanation" class="text-xs text-gray-300 italic"></p></div>
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="nextQ()" class="bg-white/10 text-white font-black py-4 rounded-2xl uppercase text-[10px]">Pular</button>
+                <button onclick="finishSession()" class="bg-red-500/20 text-red-500 font-black py-4 rounded-2xl uppercase text-[10px]">Finalizar</button>
+            </div>
+            <button onclick="nextQ()" class="w-full bg-blue-500 text-black font-black py-4 rounded-2xl uppercase text-xs">Próxima Questão</button>
+        </div>
+    </div>
+
+    <div id="debrief-screen" class="fixed inset-0 bg-black z-[200] p-8 flex flex-col justify-center hidden">
+        <h2 class="text-2xl font-black italic text-[#00d1ff] mb-6 text-center">STATUS DA MISSÃO</h2>
+        <div class="grid grid-cols-2 gap-3 mb-8">
+            <div class="glass p-4 rounded-2xl text-center"><span class="text-[8px] text-gray-500 block uppercase">Acertos</span><b id="res-hits" class="text-xp text-xl">0</b></div>
+            <div class="glass p-4 rounded-2xl text-center"><span class="text-[8px] text-gray-500 block uppercase">Precisão</span><b id="res-acc" class="text-blue-400 text-xl">0%</b></div>
+        </div>
+        <div class="p-6 bg-white/5 rounded-3xl border border-white/10 mb-8 italic text-center">
+            <p id="motivational-quote" class="text-sm text-gray-400"></p>
+            <p id="quote-author" class="text-[9px] text-blue-500 font-black mt-2 uppercase"></p>
+        </div>
+        <button onclick="closeDebrief()" class="w-full bg-white text-black font-black py-5 rounded-3xl uppercase text-xs">Retornar ao Painel</button>
+    </div>
+
+    <nav class="fixed bottom-0 left-0 w-full p-6 pb-10 flex justify-around bg-black/95 backdrop-blur-xl border-t border-white/5 z-50">
+        <button onclick="nav('home', this)" class="text-blue-400 flex flex-col items-center"><span class="text-2xl mb-1">🛡️</span><span class="text-[8px] font-black uppercase tracking-tighter">Radar</span></button>
+        <button onclick="nav('careers', this)" class="text-gray-600 flex flex-col items-center"><span class="text-2xl mb-1">🎯</span><span class="text-[8px] font-black uppercase tracking-tighter">Cargos</span></button>
+        <button onclick="nav('settings', this)" class="text-gray-600 flex flex-col items-center"><span class="text-2xl mb-1">⚙️</span><span class="text-[8px] font-black uppercase tracking-tighter">Perfil</span></button>
+    </nav>
+
+    <script>
+        // BANCO DE DADOS FOCO VIGIA ESCOLAR
+        const database = {
+            'Vigia Escolar': [
+                { b:'VUNESP', q:'Ao avistar um princípio de incêndio em materiais sólidos como papel e madeira, o vigia deve usar o extintor de:', o:['Classe A (Água)','Classe B (Gás)','Classe C (Pó)'], a:0, e:'Classe A é indicado para materiais sólidos (papel, madeira, tecidos).'},
+                { b:'FGV', q:'Segundo o ECA, se um vigia presenciar um castigo físico severo contra um aluno, ele deve comunicar imediatamente ao:', o:['Diretor da Escola','Conselho Tutelar','Polícia Militar'], a:0, e:'O fluxo hierárquico escolar exige comunicação imediata à direção, que acionará o Conselho.'},
+                { b:'IBAM', q:'A ronda perimetral em uma unidade escolar tem como objetivo principal:', o:['Verificar se os alunos estudam','Impedir a entrada de pessoas não autorizadas','Limpar o pátio'], a:1, e:'A função do vigia é a guarda do patrimônio e controle de acesso.'},
+                { b:'SHDIAS', q:'No atendimento ao público, o vigia escolar deve agir com:', o:['Rigor excessivo e silêncio','Cortesia, presteza e firmeza','Indiferença aos pais de alunos'], a:1, e:'O atendimento exige equilíbrio entre educação e segurança.'},
+                { b:'CONCURSOS BR', q:'Qual o número de telefone de emergência do Corpo de Bombeiros?', o:['190','192','193'], a:2, e:'190 PM, 192 SAMU, 193 Bombeiros.'},
+                { b:'VUNESP', q:'O vigia percebe um estranho tentando pular o muro da escola. A primeira atitude deve ser:', o:['Entrar em luta corporal','Acionar a direção/segurança e observar','Ignorar se ele não entrou'], a:1, e:'Segurança preventiva exige comunicação e monitoramento antes do confronto.'},
+                { b:'CEBRASPE', q:'É dever do vigia escolar revistar a mochila de todos os alunos diariamente sem suspeita.', o:['Certo','Errado'], a:1, e:'Revistas indiscriminadas ferem a dignidade; devem ocorrer apenas em situações específicas conforme o regimento.'}
+            ],
+            'GCM': [
+                { b:'VUNESP', q:'A Lei 13.022/14 trata de quê?', o:['Estatuto do Idoso','Estatuto das Guardas Municipais','Código de Trânsito'], a:1, e:'Lei 13.022 é o Estatuto Geral das Guardas Municipais.'}
+            ]
+        };
+
+        const quotes = [
+            {t: "A disciplina é a mãe do sucesso.", a: "Ésquilo"},
+            {t: "Onde há ordem, há paz.", a: "Sêneca"},
+            {t: "Quem estuda, tem em suas mãos o destino.", a: "Machado de Assis"},
+            {t: "Vigilância é a base da segurança.", a: "Manual Tático"}
+        ];
+
+        let state = JSON.parse(localStorage.getItem('focus_vigia_v10')) || { xp: 0, career: 'Vigia Escolar', date: '', goal: 0, hits: 0 };
+        let session = { hits: 0, total: 0, seconds: 0, timer: null };
+
+        function nav(id, btn) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
+            document.getElementById('page-' + id).classList.add('active-page');
+            if(btn) {
+                document.querySelectorAll('nav button').forEach(b => b.classList.replace('text-blue-400', 'text-gray-600'));
+                btn.classList.replace('text-gray-600', 'text-blue-400');
+            }
+        }
+
+        function init() {
+            const grid = document.getElementById('cat-grid');
+            grid.innerHTML = '';
+            Object.keys(database).forEach(c => {
+                grid.innerHTML += `<div onclick="setCareer('${c}')" class="bg-white/5 p-5 rounded-2xl flex justify-between items-center active:scale-95 transition-all"><span>${c}</span><span class="text-blue-400">ATIVAR ❯</span></div>`;
+            });
+            document.getElementById('cfg-date').value = state.date;
+            document.getElementById('cfg-goal').value = state.goal;
+            updateUI();
+        }
+
+        function setCareer(c) {
+            state.career = c;
+            saveData();
+            nav('home');
+        }
+
+        function startSession() {
+            session = { hits: 0, total: 0, seconds: 0 };
+            session.timer = setInterval(() => {
+                session.seconds++;
+                let m = Math.floor(session.seconds/60).toString().padStart(2,'0');
+                let s = (session.seconds%60).toString().padStart(2,'0');
+                document.getElementById('session-timer').innerText = `${m}:${s}`;
+            }, 1000);
+            nextQ();
+            document.getElementById('quiz-screen').classList.remove('hidden');
+        }
+
+        function nextQ() {
+            const list = database[state.career] || database['Vigia Escolar'];
+            const q = list[Math.floor(Math.random() * list.length)];
+            document.getElementById('q-text').innerText = q.q;
+            document.getElementById('q-explanation').innerText = "ANÁLISE: " + q.e;
+            document.getElementById('q-banca').innerText = q.b;
+            document.getElementById('feedback-area').classList.add('hidden');
+            const grid = document.getElementById('options-grid'); grid.innerHTML = '';
+            q.o.forEach((opt, idx) => {
+                grid.innerHTML += `<button id="opt-${idx}" onclick="check(${idx}, ${q.a})" class="w-full glass p-5 rounded-2xl text-left text-xs font-bold border border-transparent active:scale-95">${opt}</button>`;
+            });
+        }
+
+        function check(chosen, correct) {
+            session.total++;
+            const btn = document.getElementById(`opt-${chosen}`);
+            if(chosen === correct) {
+                session.hits++; state.hits++; state.xp += 100;
+                btn.classList.add('success-glow');
+            } else {
+                btn.classList.add('shake');
+                document.getElementById(`opt-${correct}`).style.borderColor = "var(--xp)";
+            }
+            document.querySelectorAll('#options-grid button').forEach(b => b.disabled = true);
+            document.getElementById('feedback-area').classList.remove('hidden');
+            updateUI();
+        }
+
+        function finishSession() {
+            clearInterval(session.timer);
+            const q = quotes[Math.floor(Math.random()*quotes.length)];
+            document.getElementById('res-hits').innerText = session.hits;
+            document.getElementById('res-acc').innerText = Math.round((session.hits/session.total)*100 || 0) + "%";
+            document.getElementById('motivational-quote').innerText = `"${q.t}"`;
+            document.getElementById('quote-author').innerText = `— ${q.a}`;
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('debrief-screen').classList.remove('hidden');
+        }
+
+        function closeDebrief() { document.getElementById('debrief-screen').classList.add('hidden'); }
+
+        function saveData() {
+            state.date = document.getElementById('cfg-date').value;
+            state.goal = document.getElementById('cfg-goal').value;
+            localStorage.setItem('focus_vigia_v10', JSON.stringify(state));
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('xp-total-display').innerText = state.xp;
+            document.getElementById('xp-fill').style.width = (state.xp % 1000 / 10) + '%';
+            document.getElementById('hud-cargo').innerText = "Cargo: " + state.career;
+            if(state.goal > 0) {
+                const rest = state.goal - (state.hits % state.goal);
+                document.getElementById('reminder-msg').innerText = `● Faltam ${rest > 0 ? rest : 0} p/ meta do plantão!`;
+            }
+        }
+
+        setInterval(() => {
+            if(!state.date) return;
+            const diff = new Date(state.date) - new Date();
+            if(diff <= 0) return;
+            document.getElementById('d-days').innerText = Math.floor(diff/(1000*60*60*24)).toString().padStart(2,'0');
+            document.getElementById('d-hours').innerText = Math.floor((diff%(1000*60*60*24))/(1000*60*60)).toString().padStart(2,'0');
+            document.getElementById('d-min').innerText = Math.floor((diff%(1000*60*60))/(1000*60)).toString().padStart(2,'0');
+            document.getElementById('d-sec').innerText = Math.floor((diff%(1000*60))/1000).toString().padStart(2,'0');
+        }, 1000);
+
+        init();
+    </script>
+</body>
+</html>
